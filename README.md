@@ -1,4 +1,4 @@
-![Laravel](https://raw.githubusercontent.com/dave-ramirez/chatbot-API/refs/heads/main/public/Laravel_Framework-copy-1030x515.webp?token=GHSAT0AAAAAAC5ZSBX6JDNEKQY5VCH27U6QZ4SWNEQ)
+![Laravel](https://raw.githubusercontent.com/lredes/chatbot/refs/heads/main/public/Laravel_Framework-copy-1030x515.webp)
 
 Proyecto basado en PHP/Laravel. 
 
