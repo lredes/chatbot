@@ -22,10 +22,8 @@ use Illuminate\Support\Facades\Validator;
 class ApiController extends Controller
 {
 
-
     public function login(Request $request)
     {
-
 
         $uniqueId = md5(uniqid());
         $respuesta = collect([
@@ -36,7 +34,7 @@ class ApiController extends Controller
 
         $validator = Validator::make($request->all(), [
             'codigo_cliente' => 'integer',
-            'celular' => 'required|string|max:15|regex:/^\+?[0-9]{7,15}$/',
+            'celular' => 'string|max:15|regex:/^\+?[0-9]{7,15}$/',
         ]);
 
 
@@ -47,44 +45,40 @@ class ApiController extends Controller
         $codigo_cliente = $request->get('codigo_cliente') ?? null;
         $celular = $request->get('celular') ?? null;
 
-
-        if (empty($celular)) {
-            $respuesta->put('desc_respuesta', 'No se han recibido los parámetros');
-        } else {
-            try {
-                if (!empty($codigo_cliente)) {
-                    $cliente = Cliente::where('clientecodigo', $codigo_cliente)->first();
-                } else {
-                    $numeros = $this->formatPhoneNumber($celular);
-                    info('numeros');
-                    info($numeros);
-                    $cliente = Cliente::whereIn('clientecelular', $numeros)
-                        ->first();
-                }
-
-                if (empty($cliente)) {
-                    $respuesta->put('desc_respuesta', 'No se encontraron datos');
-                } else {
-                    $respuesta->put('desc_respuesta', 'OK');
-                    $respuesta->put('exito', true);
-                    $token = $this->generarToken($cliente->clientecodigo);
-                    $respuesta->put('token', $token);
-					$respuesta->put('nombre_cliente', $cliente->clientenombre);
-					$respuesta->put('nombre_apellido', $cliente->clienteapellido);
-					$respuesta->put('nombre_ruc', $cliente->ruc);
-                }
-                $this->generarAuditoria($request, $respuesta, $uniqueId, 'login');
-            } catch (\Exception $e) {
-                $respuesta->put('desc_respuesta', "Algo salió mal");
-                info("Error en login " . $e->getMessage());
+        try {
+            if (!empty($codigo_cliente)) {
+                $cliente = Cliente::where('clientecodigo', $codigo_cliente)
+                                ->orWhere('clienteci', $codigo_cliente)
+                                ->first();
+            } else {
+                $numeros = $this->formatPhoneNumber($celular);
+                info('numeros');
+                info($numeros);
+                $cliente = Cliente::whereIn('clientecelular', $numeros)
+                    ->orWhereIn('clientetelefono', $numeros)
+                    ->first();
             }
+
+            if (empty($cliente)) {
+                $respuesta->put('desc_respuesta', 'No se encontraron datos');
+            } else {
+                $respuesta->put('desc_respuesta', 'OK');
+                $respuesta->put('exito', true);
+                $token = $this->generarToken($cliente->clientecodigo);
+                $respuesta->put('token', $token);
+                $respuesta->put('nombre_cliente', $cliente->clientenombre);
+                $respuesta->put('nombre_apellido', $cliente->clienteapellido);
+                $respuesta->put('nombre_ruc', $cliente->ruc);
+            }
+            $this->generarAuditoria($request, $respuesta, $uniqueId, 'login');
+        } catch (\Exception $e) {
+            $respuesta->put('desc_respuesta', "Algo salió mal");
+            info("Error en login " . $e->getMessage());
         }
 
         $this->generarAuditoria($request, $respuesta, $uniqueId, 'login');
         return $respuesta;
     }
-
-
 
     public function locker_disponibilidad($sucursal_id)
     {
@@ -151,9 +145,6 @@ class ApiController extends Controller
         }
     }
 
-
-
-
     private function checkNumero($numero, $cliente)
     {
 
@@ -181,8 +172,6 @@ class ApiController extends Controller
         }
     }
 
-
-
     private function generarToken($codigo)
     {
         $token = md5(uniqid()) . md5(uniqid());
@@ -202,7 +191,6 @@ class ApiController extends Controller
         ]);
         return $token;
     }
-
 
     public function refreshToken(Request $request)
     {
@@ -238,8 +226,6 @@ class ApiController extends Controller
         $this->generarAuditoria($request, $respuesta, $uniqueId, 'refresh_token');
         return $respuesta;
     }
-
-
 
     public function paquetesss(Request $request, $pago = false)
     {
@@ -305,7 +291,6 @@ class ApiController extends Controller
         return $respuesta;
     }
 
-
     public function paquetesEnTransito(Request $request)
     {
         $token = $request->get('token') ?? null;
@@ -365,9 +350,6 @@ class ApiController extends Controller
         return $respuesta;
     }
 
-
-
-
     public function redondearMonto($monto)
     {
         if ($monto < 100) {
@@ -384,7 +366,6 @@ class ApiController extends Controller
 
         return $monto;
     }
-
 
     public function paquetes_cantidad(Request $request)
     {
@@ -441,7 +422,6 @@ class ApiController extends Controller
         } else {
             try {
 
-
                 $clienteToken = ClienteToken::where('token', $token)->where('fecha_expiracion', '>', Carbon::now())->first();
                 if (empty($clienteToken)) {
                     $respuesta->put('desc_respuesta', 'El token no es valido');
@@ -471,18 +451,18 @@ class ApiController extends Controller
                         $respuesta->put('datos_casilla', [
                             'direccion_aerea' => [
                                 'nombre' => $cliente->nombre,
-                                'direccion_principal' => '13230 SW 132ND AVE STE 11',
+                                'direccion_principal' => '13230 SW 132ND AVE STE 25',
                                 'referencia' => 'FRONTLINER USA',
                                 'ciudad_estado' => 'MIAMI, FLORIDA',
-                                'codigo_postal' => '33186',
+                                'codigo_postal' => '33186-0014',
                                 'nro_tel' => '+1 305 647 1927'
                             ],
                             'direccion_maritima' => [
                                 'nombre' => $cliente->nombre,
-                                'direccion_principal' => '16411 NW 8TH AVE.',
+                                'direccion_principal' => '11000 NW 36TH AVE.',
                                 'referencia' => 'FRONTLINER USA',
-                                'ciudad_estado' => 'MIAMI GARDENS, FLORIDA',
-                                'codigo_postal' => '33169',
+                                'ciudad_estado' => 'MIAMI, FLORIDA',
+                                'codigo_postal' => '33167',
                                 'nro_tel' => '+1 305 628 4227'
                             ],
                         ]);
@@ -504,11 +484,10 @@ class ApiController extends Controller
         return $respuesta;
     }
 
-
     private function getTokenChat()
     {
         $client = new Client([
-            'base_uri' => 'https://sistemav2.frontlinerpy.com',                            
+			'base_uri' => 'https://sistemav2.frontlinerpy.com',                            
         ]);
         $response = $client->post('/api/token/', [
             'json' => [
@@ -529,9 +508,6 @@ class ApiController extends Controller
             return null;
         }
     }
-
-
-
 
     private function generarAuditoria($request, $respuesta, $uniqueId, $funcion)
     {
@@ -578,10 +554,6 @@ class ApiController extends Controller
         return $formattedNumbers;
     }
 
-
-
-
-
     public function normalize_ci_ruc($ci_ruc)
     {
         // Verifica si la entrada contiene un guion, lo que indica que es un RUC
@@ -599,10 +571,8 @@ class ApiController extends Controller
         return $ci_ruc_normalized;
     }
 
-
     public function sucursales(Request $request)
     {
-
 
         $uniqueId = isset($request->id_transaccion) ? $request->id_transaccion : md5(uniqid());
         $respuesta = collect([
@@ -648,7 +618,6 @@ class ApiController extends Controller
         return $respuesta;
     }
 
-
     public function direccion_miami(Request $request)
     {
         $uniqueId = isset($request->id_transaccion) ? $request->id_transaccion : md5(uniqid());
@@ -681,7 +650,6 @@ class ApiController extends Controller
 
         return $respuesta;
     }
-
 
     private function prolongarToken($token)
     {
@@ -720,7 +688,7 @@ class ApiController extends Controller
                 return $respuesta;
             }
             $client = new Client([
-                'base_uri' => 'https://sistemav2.frontlinerpy.com',                            
+				'base_uri' => 'https://sistemav2.frontlinerpy.com',                            
             ]);
             $token = $this->getTokenChat();
             $response = $client->get('/api/chatbot/obtener_horarios', [
@@ -778,7 +746,7 @@ class ApiController extends Controller
             }
 
             $client = new Client([
-                'base_uri' => 'https://sistemav2.frontlinerpy.com',                            
+				'base_uri' => 'https://sistemav2.frontlinerpy.com',                            
             ]);
 
             $token = $this->getTokenChat();
@@ -809,8 +777,6 @@ class ApiController extends Controller
         $this->prolongarToken($request->token);
         return $respuesta;
     }
-
-
 
     public function crear_pedido(Request $request)
     {
@@ -899,7 +865,6 @@ class ApiController extends Controller
         return $respuesta;
     }
 
-
     public function paquetes(Request $request, $pago = false) {
         $token = $request->get('token') ?? null;
         $uniqueId = isset($request->id_transaccion) ? $request->id_transaccion : md5(uniqid());
@@ -927,7 +892,7 @@ class ApiController extends Controller
 
                     $token = $this->getTokenChat();
                     $client = new Client([
-                        'base_uri' => 'https://sistemav2.frontlinerpy.com',                            
+	                	'base_uri' => 'https://sistemav2.frontlinerpy.com',                            
                     ]);
                     $cliente = $clienteToken->cliente;
                     $response = $client->post('/api/chatbot/crear', [
@@ -935,7 +900,7 @@ class ApiController extends Controller
                             'Authorization' => 'Bearer ' . $token,
                         ],
                         'json' => [
-                            'modalidad' => $request->modalidad ?? 'C',
+                            'modalidad' => $request->modalidad ?? 'L',
                             'fecha_retiro' => $request->fecha_retiro ?? Carbon::now()->format('Y-m-d'),
                             'sucursal_id' => $cliente->sucursal,
                             'hora_retiro' => $request->hora_retiro ?? 37800,
@@ -1022,8 +987,6 @@ class ApiController extends Controller
         ]);
     }
 
-
-
     private function consultar_disponibilidad_p($modalidad, $sucursal_id, $fecha_retiro = null,  $hora_retiro = null)
     {
 
@@ -1060,7 +1023,6 @@ class ApiController extends Controller
         }
         return $response['msg'] ?? null;
     }
-
 
     public function obtener_pago(ObtenerPagoRequest $request)
     {
